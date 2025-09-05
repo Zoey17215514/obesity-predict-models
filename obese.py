@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.svm import SVC 
+from sklearn.svm import SVC
 from sklearn.inspection import permutation_importance
 
 # Load the model
@@ -215,9 +215,10 @@ if loaded_models is not None and df is not None:
 
                     # Plot the pie chart
                     fig_pie, ax_pie = plt.subplots(figsize=(8, 8))
-                    risk_distribution.plot.pie(autopct='%1.1f%%', startangle=90, ax=ax_pie)
+                    risk_distribution.plot.pie(startangle=90, ax=ax_pie, autopct='%1.1f%%')
                     ax_pie.set_title('Risk Distribution for Obesity Levels')
                     ax_pie.set_ylabel('')
+                    ax_pie.legend(risk_distribution.index, title="Obesity Levels", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1)) # Add legend
                     st.pyplot(fig_pie)
                     plt.close(fig_pie)
                 else:
@@ -230,16 +231,16 @@ if loaded_models is not None and df is not None:
                 is_svm = isinstance(model, SVC)
                 svm_is_linear = is_svm and model.kernel == 'linear'
 
-                if hasattr(model, 'feature_importances_'): 
-                    st.subheader(f"Feature Importances ({selected_model_name})") 
-                    importances = model.feature_importances_ 
+                if hasattr(model, 'feature_importances_'):
+                    st.subheader(f"Feature Importances ({selected_model_name})")
+                    importances = model.feature_importances_
                     if len(importances) == len(feature_names):
                         feat_importances = pd.Series(importances, index=feature_names)
                         feat_importances = feat_importances.sort_values(ascending=False)
 
-                        fig4, ax4 = plt.subplots(figsize=(8, 6)) 
+                        fig4, ax4 = plt.subplots(figsize=(8, 6))
                         feat_importances.plot(kind='barh', ax=ax4)
-                        ax4.set_title(f'Feature Importances ({selected_model_name})') 
+                        ax4.set_title(f'Feature Importances ({selected_model_name})')
                         ax4.set_xlabel('Importance')
                         ax4.invert_yaxis()
                         st.pyplot(fig4)
