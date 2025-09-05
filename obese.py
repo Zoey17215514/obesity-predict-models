@@ -15,7 +15,6 @@ from sklearn.inspection import permutation_importance # Import permutation_impor
 # Load the model
 try:
     loaded_models = load('all_classification_models.joblib')
-    st.success("All classification models loaded successfully.")
 except FileNotFoundError:
     st.error("Error: 'all_classification_models.joblib' not found. Please ensure the models are saved.")
     loaded_models = None # Set to None to prevent errors if the file is not found
@@ -104,7 +103,6 @@ if loaded_models is not None and df is not None:
     st.header("1. Model Performance Comparison")
 
     if not model_performance_df.empty:
-        st.subheader("1.1 Model Performance Table (on Test Set)")
         st.dataframe(model_performance_df.set_index('Model').style.highlight_max(axis=0, color='lightgreen'), use_container_width=True)
 
         # Accuracy Over Models Line Chart
@@ -242,9 +240,6 @@ if loaded_models is not None and df is not None:
                     plt.close(fig_pie)
                 else:
                     st.info("The selected model does not support probability prediction (predict_proba) for the pie chart.")
-
-                # Add Feature Importance chart below prediction results
-                st.subheader(f"Feature Relevance ({selected_model_name})") # Changed title to be more general
 
                 # Get feature names directly from deployment_features since they are numerical
                 feature_names = deployment_features
