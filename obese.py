@@ -284,7 +284,6 @@ if loaded_models is not None and df is not None:
                      else:
                          st.warning(f"Could not match feature coefficients to feature names. Number of coefficients ({len(coef_values)}) and feature names ({len(feature_names)}) do not match.")
                 elif is_svm and not svm_is_linear:
-                     st.info(f"The selected SVM model uses a non-linear kernel ({model.kernel}) and therefore does not have coefficients to display feature relevance.")
                      # Add Permutation Importance chart for non-linear SVM
                      st.subheader(f"Permutation Importance ({selected_model_name})")
                      try:
