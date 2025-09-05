@@ -2,22 +2,22 @@ import streamlit as st
 from joblib import load
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split # Import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.svm import SVC # Import SVC
-from sklearn.inspection import permutation_importance # Import permutation_importance
+from sklearn.svm import SVC 
+from sklearn.inspection import permutation_importance
 
 # Load the model
 try:
     loaded_models = load('all_classification_models.joblib')
 except FileNotFoundError:
     st.error("Error: 'all_classification_models.joblib' not found. Please ensure the models are saved.")
-    loaded_models = None # Set to None to prevent errors if the file is not found
+    loaded_models = None
 
 
 # Define the features to be used for prediction (ensure this matches what the models were trained on)
@@ -25,15 +25,14 @@ deployment_features = ['Age', 'Height', 'Weight', 'FCVC', 'NCP']
 
 # Load the original data to fit the preprocessor correctly from CSV
 try:
-    csv_file_path = 'ObesityDataSet.csv' # Changed to CSV file path
-    df = pd.read_csv(csv_file_path) # Changed to read from CSV
+    csv_file_path = 'ObesityDataSet.csv'
+    df = pd.read_csv(csv_file_path)
 
 except FileNotFoundError:
     st.error("Error: 'ObesityDataSet.csv' not found. Please ensure the data file is available.")
     df = None
 
 # Create preprocessing pipelines for numerical and categorical features
-# This needs to be fitted on the training data
 if df is not None:
     # Split data into training and testing sets for evaluation
     X_train_eval, X_test_eval, y_train_eval, y_test_eval = train_test_split(
@@ -41,28 +40,23 @@ if df is not None:
     )
 
     # Identify categorical and numerical columns based on the deployment features
-    # With the current deployment_features, there are no categorical columns.
     categorical_cols_for_preprocessor = [col for col in deployment_features if col in df.columns and df[col].dtype == 'object']
     numerical_cols_for_preprocessor = [col for col in deployment_features if col in df.columns and df[col].dtype != 'object']
 
     numerical_transformer_deploy = StandardScaler()
-    # categorical_transformer_deploy = OneHotEncoder(handle_unknown='ignore', drop='first') # No categorical features for these models
 
     # Simplify the preprocessor since only numerical features are used
     preprocessor_deploy = ColumnTransformer(
         transformers=[
             ('num', numerical_transformer_deploy, numerical_cols_for_preprocessor)
-            # Removed 'cat' transformer as there are no categorical features in deployment_features
         ],
         remainder='passthrough'
     )
-
-    # Fit the preprocessor with the training data (evaluation split) - Moved fitting outside the button click
     preprocessor_deploy.fit(X_train_eval)
 
     # Transform the test set for model evaluation
     X_test_processed_eval = preprocessor_deploy.transform(X_test_eval)
-    y_test_eval = y_test_eval # Keep the original test labels
+    y_test_eval = y_test_eval
 
     # Calculate performance metrics for all loaded models on the test set
     model_performance_data = []
@@ -72,10 +66,8 @@ if df is not None:
                 # For SVC, ensure probability=True is set if not already
                 if isinstance(model, SVC) and not hasattr(model, 'predict_proba'):
                      model.probability = True
-                     # Refit the model to enable probabilities (this might take time)
-                     # Fit on the transformed training data used for evaluation
+                     # Refit the model to enable probabilities
                      model.fit(preprocessor_deploy.transform(X_train_eval), y_train_eval)
-
 
                 y_pred_eval = model.predict(X_test_processed_eval)
                 accuracy = accuracy_score(y_test_eval, y_pred_eval)
@@ -107,11 +99,11 @@ if loaded_models is not None and df is not None:
 
         # Accuracy Over Models Line Chart
         model_performance_melted_line = model_performance_df.melt(id_vars='Model', var_name='Metric', value_name='Score', value_vars=['Accuracy', 'Precision', 'Recall', 'F1 Score'])
-        fig1, ax1 = plt.subplots(figsize=(8, 5)) # Smaller figure size
+        fig1, ax1 = plt.subplots(figsize=(8, 5))
         sns.lineplot(x='Model', y='Score', hue='Metric', data=model_performance_melted_line, marker='o', ax=ax1)
         ax1.set_title('Model Performance Comparison (Line Plot)')
         ax1.set_ylabel('Score')
-        ax1.set_ylim(0.8, 1.0) # Adjust y-axis limits as needed
+        ax1.set_ylim(0.8, 1.0)
         ax1.legend(title='Metric')
         st.pyplot(fig1)
         plt.close(fig1)
@@ -123,7 +115,7 @@ if loaded_models is not None and df is not None:
     selected_model_name = st.radio("Select a Model for Prediction:", models_to_choose)
 
 
-    st.header("3. User Input Data") # Changed section header
+    st.header("3. User Input Data")
     input_data = {}
     # Define mapping for FCVC text labels to numerical values
     fcvc_mapping = {"Never": 1.0, "Sometimes": 2.0, "Always": 3.0}
@@ -133,7 +125,6 @@ if loaded_models is not None and df is not None:
     col_age, col_height, col_weight = st.columns(3)
     with col_age:
         col = 'Age'
-        # Check if the column is in deployment_features before creating the input
         if col in deployment_features:
              input_data[col] = st.number_input(f"{col} (years):", value=0, min_value=0, help="Enter age in years") # Updated label and help
 
@@ -154,12 +145,11 @@ if loaded_models is not None and df is not None:
         col = 'FCVC'
         if col in deployment_features:
              selected_fcvc_text = st.selectbox("Frequency of consumption of vegetables:", fcvc_options)
-             input_data[col] = fcvc_mapping[selected_fcvc_text] # Map text to numerical value
+             input_data[col] = fcvc_mapping[selected_fcvc_text]
 
     with col_ncp:
         col = 'NCP'
         if col in deployment_features:
-             # Changed to radio button input
              input_data[col] = st.radio("Number of main meals per day:", options=[1.0, 2.0, 3.0, 4.0])
 
 
@@ -172,23 +162,19 @@ if loaded_models is not None and df is not None:
                 options = list(df[col].unique())
                 input_data[col] = st.selectbox(f"{col}:", options)
              elif col in numerical_cols_for_preprocessor:
-                input_data[col] = st.number_input(f"{col}:", value=0.0, min_value=0.0) # Assuming remaining numerical features should also be non-negative
+                input_data[col] = st.number_input(f"{col}:", value=0.0, min_value=0.0)
 
-
-    # Predict (with submit button)
+    # Predict
     if st.button("Generate Prediction Report"):
         # Create a DataFrame from the input data
         input_df = pd.DataFrame([input_data])
 
         # Preprocess the input data using the fitted preprocessor
-        # Ensure the input DataFrame has the same columns as the training data used for the preprocessor
-        # This might require adding missing columns with default values (e.g., 0 for one-hot encoded)
-        # For simplicity with current numerical-only features, we can proceed directly
         try:
             input_data_processed = preprocessor_deploy.transform(input_df[deployment_features])
         except ValueError as e:
              st.error(f"Error during preprocessing: {e}. Please check if all required features are provided.")
-             input_data_processed = None # Set to None to prevent further errors
+             input_data_processed = None
 
 
         st.header("4. Prediction Results")
@@ -215,7 +201,7 @@ if loaded_models is not None and df is not None:
                     st.write("Based on the provided data and the selected model, the predicted obesity level falls into the 'Insufficient Weight' category. This suggests you are underweight, which can also lead to health concerns.")
 
 
-                # Add a pie chart for risk distribution (using predict_proba if available)
+                # Pie chart
                 if hasattr(model, 'predict_proba'):
                     st.subheader("Risk Distribution by Obesity Level:")
                     # Get the probability distribution for the prediction
@@ -227,15 +213,11 @@ if loaded_models is not None and df is not None:
                     # Create a pandas Series for easy plotting
                     risk_distribution = pd.Series(probabilities, index=class_labels)
 
-                    # # Filter for the desired classes - Removed this line to include all classes
-                    # target_classes = ['Insufficient_Weight', 'Normal_Weight', 'Obesity_Type_I', 'Obesity_Type_II', 'Obesity_Type_III']
-                    # risk_distribution_filtered = risk_distribution[risk_distribution.index.isin(target_classes)]
-
                     # Plot the pie chart
                     fig_pie, ax_pie = plt.subplots(figsize=(8, 8))
                     risk_distribution.plot.pie(autopct='%1.1f%%', startangle=90, ax=ax_pie)
                     ax_pie.set_title('Risk Distribution for Obesity Levels')
-                    ax_pie.set_ylabel('') # Remove the default y-label
+                    ax_pie.set_ylabel('')
                     st.pyplot(fig_pie)
                     plt.close(fig_pie)
                 else:
@@ -248,16 +230,16 @@ if loaded_models is not None and df is not None:
                 is_svm = isinstance(model, SVC)
                 svm_is_linear = is_svm and model.kernel == 'linear'
 
-                if hasattr(model, 'feature_importances_'): # Use 'model' which is the selected model
-                    st.subheader(f"Feature Importances ({selected_model_name})") # Specific title for importance
-                    importances = model.feature_importances_ # Use the selected model's importances
+                if hasattr(model, 'feature_importances_'): 
+                    st.subheader(f"Feature Importances ({selected_model_name})") 
+                    importances = model.feature_importances_ 
                     if len(importances) == len(feature_names):
                         feat_importances = pd.Series(importances, index=feature_names)
                         feat_importances = feat_importances.sort_values(ascending=False)
 
-                        fig4, ax4 = plt.subplots(figsize=(8, 6)) # Smaller figure size
+                        fig4, ax4 = plt.subplots(figsize=(8, 6)) 
                         feat_importances.plot(kind='barh', ax=ax4)
-                        ax4.set_title(f'Feature Importances ({selected_model_name})') # Updated title
+                        ax4.set_title(f'Feature Importances ({selected_model_name})') 
                         ax4.set_xlabel('Importance')
                         ax4.invert_yaxis()
                         st.pyplot(fig4)
@@ -265,18 +247,17 @@ if loaded_models is not None and df is not None:
                     else:
                         st.warning(f"Could not match feature importances to feature names. Number of importances ({len(importances)}) and feature names ({len(feature_names)}) do not match.")
 
-                elif hasattr(model, 'coef_') and svm_is_linear: # Check if it has coef_ AND it's a linear SVM
-                     st.subheader(f"Feature Coefficients (Absolute Mean) ({selected_model_name})") # Specific title for coefficients
-                     # For multi-class, coef_ is shape (n_classes, n_features). Take the mean of absolute values.
-                     coef_values = np.abs(model.coef_).mean(axis=0) # Use the selected model's coefficients
+                elif hasattr(model, 'coef_') and svm_is_linear:
+                     st.subheader(f"Feature Coefficients (Absolute Mean) ({selected_model_name})")
+                     coef_values = np.abs(model.coef_).mean(axis=0)
 
                      if len(coef_values) == len(feature_names):
                          feat_coef = pd.Series(coef_values, index=feature_names)
                          feat_coef = feat_coef.sort_values(ascending=False)
 
-                         fig_coef, ax_coef = plt.subplots(figsize=(8, 6)) # Smaller figure size
+                         fig_coef, ax_coef = plt.subplots(figsize=(8, 6))
                          feat_coef.plot(kind='barh', ax=ax_coef)
-                         ax_coef.set_title(f'Feature Coefficients (Absolute Mean) ({selected_model_name})') # Updated title
+                         ax_coef.set_title(f'Feature Coefficients (Absolute Mean) ({selected_model_name})')
                          ax_coef.set_xlabel('Absolute Mean Coefficient Value')
                          ax_coef.invert_yaxis()
                          st.pyplot(fig_coef)
@@ -284,18 +265,12 @@ if loaded_models is not None and df is not None:
                      else:
                          st.warning(f"Could not match feature coefficients to feature names. Number of coefficients ({len(coef_values)}) and feature names ({len(feature_names)}) do not match.")
                 elif is_svm and not svm_is_linear:
-                     # Add Permutation Importance chart for non-linear SVM
+                     # Permutation Importance chart for non-linear SVM
                      st.subheader(f"Permutation Importance ({selected_model_name})")
                      try:
-                        # Calculate permutation importance on the test set
-                        # Use the preprocessor and model within a pipeline for consistent transformation
-                        # Create a temporary pipeline for permutation importance calculation
+
                         perm_pipeline = Pipeline(steps=[('preprocessor', preprocessor_deploy),
                                                         ('classifier', model)])
-
-                        # Permutation importance requires a fitted model and data
-                        # Make sure the model is fitted (should be if loaded successfully)
-                        # Use the preprocessed test set for permutation importance calculation
                         result = permutation_importance(perm_pipeline, X_test_eval, y_test_eval, n_repeats=10, random_state=42, n_jobs=-1)
 
                         # Get the importance scores and sort them
